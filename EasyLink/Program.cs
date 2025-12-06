@@ -6,13 +6,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 29));
 
+var dbSection = builder.Configuration.GetSection("DB");
+
 var csb = new MySqlConnectionStringBuilder
 {
-    Server = "butcher.eka.s-hub.xyz",
-    Port = 3306,
-    Database = "s123380_easyeasylinkdb",
-    UserID = "u123380_yOK1fFIWEa",
-    Password = "=S^SVz!+nOdz9iic84m5xfbV",
+    Server = dbSection["Server"],
+    Port = uint.Parse(dbSection["Port"] ?? "3306"),
+    Database = dbSection["Database"],
+    UserID = dbSection["UserID"],
+    Password = dbSection["Password"],
 };
 var connStr = csb.ConnectionString;
 
@@ -23,13 +25,25 @@ builder.Services.AddDbContext<PurchaseDb>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var allowedOrigin = builder.Configuration["ALLOWED_ORIGIN"] ?? "http://localhost:5173";
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("AllowLocalFrontend", policy =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyHeader()
               .AllowAnyMethod();
+    });
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins(allowedOrigin) // Разрешаем только наш фронт
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -39,10 +53,13 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-
+    app.UseCors("AllowLocalFrontend");
+}
+else
+{
+    app.UseCors("AllowFrontend");
 }
 
-app.UseCors("AllowFrontend");
 
 // Эндпоинт для создания покупки
 app.MapPost("/purchases", async (PurchaseRequest request, PurchaseDb db) =>
