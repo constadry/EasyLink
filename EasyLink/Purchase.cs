@@ -7,4 +7,6 @@ public class Purchase
     public ShopItem? ShopItem { get; set; }
     public DateTime PurchaseDate { get; set; }
     public decimal Amount { get; set; }
+    public string? PaymentId { get; set; }
+    public string Status { get; set; } = "NEW";
 }

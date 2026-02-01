@@ -1,6 +1,11 @@
+п»їusing System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
+using EasyLink.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,12 +23,13 @@ var csb = new MySqlConnectionStringBuilder
 };
 var connStr = csb.ConnectionString;
 
-// Добавляем DbContext
 builder.Services.AddDbContext<PurchaseDb>(options =>
     options.UseMySql(connStr, serverVersion));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers();
+
 
 var allowedOrigin = builder.Configuration["ALLOWED_ORIGIN"] ?? "http://localhost:5173";
 
@@ -41,11 +47,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigin) // Разрешаем только наш фронт
+        policy.WithOrigins(allowedOrigin)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
 });
+
+builder.Services.AddHttpClient<TinkoffService>();
 
 var app = builder.Build();
 
@@ -61,15 +69,12 @@ else
 }
 
 
-// Эндпоинт для создания покупки
 app.MapPost("/purchases", async (PurchaseRequest request, PurchaseDb db) =>
 {
-    // Проверяем существование услуги
     var service = await db.ShopItems.FindAsync(request.ServiceId);
     if (service == null)
-        return Results.NotFound(new { message = "Услуга не найдена" });
+        return Results.NotFound(new { message = "РЎРµСЂРІРёСЃ РЅРµ РЅР°Р№РґРµРЅ" });
 
-    // Создаём покупку
     var purchase = new Purchase
     {
         Email = request.Email,
@@ -87,13 +92,13 @@ app.MapPost("/purchases", async (PurchaseRequest request, PurchaseDb db) =>
 .WithName("CreatePurchase")
 .WithOpenApi();
 
-// Получить все услуги
+app.MapControllers();
+
 app.MapGet("/shopitems", async (PurchaseDb db) =>
     await db.ShopItems.Where(s => s.IsActive).ToListAsync())
 .WithName("GetShopItems")
 .WithOpenApi();
 
-// Получить покупку по ID
 app.MapGet("/purchases/{id}", async (int id, PurchaseDb db) =>
     await db.Purchases.Include(p => p.ShopItem).FirstOrDefaultAsync(p => p.Id == id)
         is Purchase purchase
