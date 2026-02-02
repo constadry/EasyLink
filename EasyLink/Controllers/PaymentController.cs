@@ -98,5 +98,45 @@ namespace EasyLink.Controllers
             // 3. Must return "OK" string
             return Content("OK");
         }
+
+        [HttpPost("cancel")]
+        public async Task<IActionResult> CancelPayment([FromBody] CancelRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.PaymentId))
+                {
+                    return BadRequest(new { error = "PaymentId is required" });
+                }
+
+                // If items are provided, ensure amounts match
+                if (request.Items != null && request.Items.Count > 0 && request.Amount.HasValue)
+                {
+                    var totalItemsAmount = 0;
+                    foreach (var item in request.Items)
+                    {
+                        totalItemsAmount += item.Amount;
+                    }
+                    
+                    if (totalItemsAmount != (int)(request.Amount.Value * 100))
+                    {
+                        // This is a warning, depending on business logic you might want to fail
+                        // or just log it. Tinkoff will validate this anyway.
+                    }
+                }
+
+                var result = await _tinkoffService.CancelPaymentAsync(request.PaymentId, request.Amount, request.Items, request.Email, request.Taxation);
+                
+                // You might want to update the database here as well if the cancellation is successful
+                // e.g., mark the purchase as Refunded. 
+                // However, doing it in the webhook is more robust.
+                
+                return Content(result, "application/json");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }

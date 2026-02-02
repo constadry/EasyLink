@@ -112,5 +112,57 @@ namespace EasyLink.Services
             
             return BitConverter.ToString(bytes).Replace("-", "").ToLower();
         }
+
+        public async Task<string> CancelPaymentAsync(string paymentId, decimal? amount, List<ReceiptItem> items, string email, string taxation)
+        {
+            var requestData = new SortedDictionary<string, object>
+            {
+                { "TerminalKey", _terminalKey },
+                { "PaymentId", paymentId },
+                { "Password", _password }
+            };
+
+            if (amount.HasValue)
+            {
+                requestData.Add("Amount", (int)(amount.Value * 100)); // Convert to kopecks
+            }
+
+            // --- IMPORTANT: Receipt Logic ---
+            // If you have items, you MUST construct the Receipt object
+            if (items != null && items.Count > 0)
+            {
+                var receipt = new Receipt
+                {
+                    Email = email,
+                    Taxation = taxation ?? "usn_income", // Use passed value or fallback
+                    Items = items
+                };
+                
+                // Tinkoff expects nested JSON objects, but they are NOT part of the Token generation usually.
+                // However, they must be in the body.
+                requestData.Add("Receipt", receipt);
+            }
+
+            // 1. Generate Token (Receipt object is usually EXCLUDED from token generation logic in V2, 
+            // but verify with documentation if you get "Token Incorrect". Usually only top-level scalar fields are hashed).
+            // We create a separate dictionary for hashing to be safe.
+            var argsForToken = new SortedDictionary<string, object>();
+            foreach(var kvp in requestData) {
+                if (kvp.Key != "Receipt" && kvp.Key != "DATA") {
+                    argsForToken.Add(kvp.Key, kvp.Value);
+                }
+            }
+            
+            var token = GenerateToken(argsForToken); // Use the method from previous answer
+
+            // 2. Prepare final payload
+            requestData.Remove("Password");
+            requestData.Add("Token", token);
+
+            var content = new StringContent(JsonSerializer.Serialize(requestData), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("https://securepay.tinkoff.ru/v2/Cancel", content);
+            
+            return await response.Content.ReadAsStringAsync();
+        }
     }
 }

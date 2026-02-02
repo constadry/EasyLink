@@ -39,4 +39,30 @@ namespace EasyLink.Models
         public string ExpDate { get; set; }
         public string Token { get; set; }
     }
+
+    public class CancelRequest
+    {
+        public string PaymentId { get; set; }
+        public decimal? Amount { get; set; } // Optional: specific amount to refund
+        public List<ReceiptItem> Items { get; set; } // List of items to return
+        public string Email { get; set; }
+        public string Taxation { get; set; } // Added taxation field
+    }
+
+    // Structure required by Tinkoff for 54-FZ
+    public class Receipt
+    {
+        public string Email { get; set; }
+        public string Taxation { get; set; } // e.g., "osn", "usn_income"
+        public List<ReceiptItem> Items { get; set; }
+    }
+
+    public class ReceiptItem
+    {
+        public string Name { get; set; }
+        public int Price { get; set; }    // Price in kopecks
+        public int Quantity { get; set; } // Quantity (usually 1.00 -> 1)
+        public int Amount { get; set; }   // Total amount (Price * Quantity) in kopecks
+        public string Tax { get; set; }   // e.g., "vat20", "none"
+    }
 }
