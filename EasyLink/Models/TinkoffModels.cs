@@ -64,5 +64,7 @@ namespace EasyLink.Models
         public int Quantity { get; set; } // Quantity (usually 1.00 -> 1)
         public int Amount { get; set; }   // Total amount (Price * Quantity) in kopecks
         public string Tax { get; set; }   // e.g., "vat20", "none"
+        public string PaymentMethod { get; set; } = "full_payment"; // full_prepayment, prepayment, advance, full_payment, etc.
+        public string PaymentObject { get; set; } = "service"; // commodity, excise, job, service, payment, etc.
     }
 }

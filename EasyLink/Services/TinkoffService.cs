@@ -25,18 +25,37 @@ namespace EasyLink.Services
         }
 
 
-        public async Task<string> InitPaymentUrlAsync(string orderId, decimal amount, string email, string description)
+        public async Task<string> InitPaymentUrlAsync(string orderId, decimal amount, string email, string description, string taxation = "usn_income")
         {
+            var amountInKopecks = (int)(amount * 100);
+            
+            // Create receipt item for fiscalization (54-ФЗ)
+            var receiptItem = new ReceiptItem
+            {
+                Name = description.Length > 64 ? description.Substring(0, 64) : description, // Max 64 chars per Tinkoff docs
+                Price = amountInKopecks,
+                Quantity = 1,
+                Amount = amountInKopecks,
+                Tax = "none" // "none", "vat0", "vat10", "vat20" etc.
+            };
+
+            var receipt = new Receipt
+            {
+                Email = email,
+                Taxation = taxation, // "osn", "usn_income", "usn_income_outcome", "envd", "esn", "patent"
+                Items = new List<ReceiptItem> { receiptItem }
+            };
+
             var requestData = new SortedDictionary<string, object>
             {
                 { "TerminalKey", _terminalKey },
-                { "Amount", (int)(amount * 100) }, // Convert to kopecks
+                { "Amount", amountInKopecks },
                 { "OrderId", orderId },
                 { "Description", description },
                 { "Password", _password } // Password is required for token generation
             };
 
-            // Generate signature (Token)
+            // Generate signature (Token) - Receipt and DATA are excluded from token generation
             var token = GenerateToken(requestData);
 
             // Remove Password before sending to API (Security requirement)
@@ -45,8 +64,8 @@ namespace EasyLink.Services
             // Add Token to request
             requestData.Add("Token", token);
             
-            // Basic Init adds no extra fields usually, but receipt might be needed later.
-            // For now, following the user's simple flow.
+            // Add Receipt object (required for fiscalization)
+            requestData.Add("Receipt", receipt);
 
             var jsonRequest = JsonSerializer.Serialize(requestData);
             _logger.LogInformation("Tinkoff Init Request: {Request}", jsonRequest);

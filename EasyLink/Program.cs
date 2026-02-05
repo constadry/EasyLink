@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using EasyLink.Services;
+using EasyLink.Models;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -54,6 +55,11 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddHttpClient<TinkoffService>();
+
+// Telegram configuration - читаем из конфигурации (appsettings или env vars)
+builder.Services.Configure<TelegramSettings>(
+    builder.Configuration.GetSection("Telegram"));
+builder.Services.AddHttpClient<ITelegramService, TelegramService>();
 
 var app = builder.Build();
 
