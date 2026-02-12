@@ -51,17 +51,16 @@ namespace EasyLink.Controllers
                     Nickname = request.Nick,
                     ShopItemId = request.ProductId,
                     PurchaseDate = DateTime.UtcNow,
-                    Amount = request.Amount > 0 ? request.Amount : shopItem.Price
+                    Amount = request.Amount,
+                    Status = "PENDING"
                 };
 
                 _db.Purchases.Add(purchase);
                 await _db.SaveChangesAsync();
 
                 var orderId = purchase.Id.ToString();
-                // Override request amount with DB amount to ensure consistency? 
-                // Or use request amount. Let's use purchase.Amount.
                 
-                var paymentUrl = await _tinkoffService.InitPaymentUrlAsync(orderId, shopItem.Price, purchase.Email, $"Order #{orderId}");
+                var paymentUrl = await _tinkoffService.InitPaymentUrlAsync(orderId, shopItem.Price, purchase.Email, $"Order #{orderId}", request.Amount);
                 return Ok(new { url = paymentUrl });
             }
             catch (Exception ex)

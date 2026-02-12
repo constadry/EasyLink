@@ -24,7 +24,7 @@ namespace EasyLink.Services
             _password = config["TBank:Password"];
         }
 
-        public async Task<string> InitPaymentUrlAsync(string orderId, decimal price, string email, string description, string taxation = "usn_income")
+        public async Task<string> InitPaymentUrlAsync(string orderId, decimal price, string email, string description, int quantity, string taxation = "usn_income")
         {
             var priceInKopecks = (int)(price * 100);
             

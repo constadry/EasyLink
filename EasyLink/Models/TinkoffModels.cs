@@ -8,7 +8,8 @@ namespace EasyLink.Models
     public class InitPaymentRequest
     {
         public string OrderId { get; set; }
-        public int Amount { get; set; } // Amount in kopecks (rubles * 100)
+        public int Price { get; set; } // Price in kopecks (rubles * 100)
+        public int Amount { get; set; }
         public string Description { get; set; }
         public string Email { get; set; }
         // Added these to support existing logic if needed, but keeping user's core structure
