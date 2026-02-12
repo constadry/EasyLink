@@ -33,7 +33,7 @@ namespace EasyLink.Models
         public string Status { get; set; }
         public string PaymentId { get; set; }
         public string ErrorCode { get; set; }
-        public int Amount { get; set; }
+        public int Price { get; set; }
         public int? CardId { get; set; }
         public string Pan { get; set; }
         public string ExpDate { get; set; }

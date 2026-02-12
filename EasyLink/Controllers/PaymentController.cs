@@ -61,7 +61,7 @@ namespace EasyLink.Controllers
                 // Override request amount with DB amount to ensure consistency? 
                 // Or use request amount. Let's use purchase.Amount.
                 
-                var paymentUrl = await _tinkoffService.InitPaymentUrlAsync(orderId, purchase.Amount, purchase.Email, $"Order #{orderId}");
+                var paymentUrl = await _tinkoffService.InitPaymentUrlAsync(orderId, shopItem.Price, purchase.Email, $"Order #{orderId}");
                 return Ok(new { url = paymentUrl });
             }
             catch (Exception ex)
@@ -132,6 +132,36 @@ namespace EasyLink.Controllers
                 // However, doing it in the webhook is more robust.
                 
                 return Content(result, "application/json");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("purchases")]
+        public async Task<IActionResult> GetAllPurchases([FromQuery] PaginationRequest pagination)
+        {
+            try
+            {
+                var purchases = await _db.Purchases
+                    .Include(p => p.ShopItem)
+                    .OrderByDescending(p => p.PurchaseDate)
+                    .Skip((pagination.Page - 1) * pagination.PageSize)
+                    .Take(pagination.PageSize)
+                    .ToListAsync();
+
+                var result = new PaginationResult<Purchase>
+                {
+                    Items = purchases,
+                    Pagination = new Pagination
+                    {
+                        Page = pagination.Page,
+                        PageSize = pagination.PageSize,
+                    }
+                };
+
+                return Ok(result);
             }
             catch (Exception ex)
             {

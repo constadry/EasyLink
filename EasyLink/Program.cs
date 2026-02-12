@@ -74,30 +74,6 @@ else
     app.UseCors("AllowFrontend");
 }
 
-
-app.MapPost("/purchases", async (PurchaseRequest request, PurchaseDb db) =>
-{
-    var service = await db.ShopItems.FindAsync(request.ServiceId);
-    if (service == null)
-        return Results.NotFound(new { message = "Сервис не найден" });
-
-    var purchase = new Purchase
-    {
-        Email = request.Email,
-        Nickname = request.Nickname,
-        ShopItemId = request.ServiceId,
-        PurchaseDate = DateTime.UtcNow,
-        Amount = service.Price
-    };
-
-    db.Purchases.Add(purchase);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"/purchases/{purchase.Id}", purchase);
-})
-.WithName("CreatePurchase")
-.WithOpenApi();
-
 app.MapControllers();
 
 app.MapGet("/shopitems", async (PurchaseDb db) =>
@@ -105,12 +81,12 @@ app.MapGet("/shopitems", async (PurchaseDb db) =>
 .WithName("GetShopItems")
 .WithOpenApi();
 
-app.MapGet("/purchases/{id}", async (int id, PurchaseDb db) =>
-    await db.Purchases.Include(p => p.ShopItem).FirstOrDefaultAsync(p => p.Id == id)
-        is Purchase purchase
-        ? Results.Ok(purchase)
-        : Results.NotFound())
-.WithName("GetPurchase")
+app.MapGet("/shopitems/{id}", async (int id, PurchaseDb db) =>
+    await db.ShopItems.FindAsync(id)
+        is ShopItem shopItem
+        ? Results.Ok(shopItem)
+        : Results.NotFound(new { error = $"Shop item with ID {id} not found" }))
+.WithName("GetShopItem")
 .WithOpenApi();
 
 app.Run();

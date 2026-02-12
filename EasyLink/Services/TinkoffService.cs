@@ -24,18 +24,17 @@ namespace EasyLink.Services
             _password = config["TBank:Password"];
         }
 
-
-        public async Task<string> InitPaymentUrlAsync(string orderId, decimal amount, string email, string description, string taxation = "usn_income")
+        public async Task<string> InitPaymentUrlAsync(string orderId, decimal price, string email, string description, string taxation = "usn_income")
         {
-            var amountInKopecks = (int)(amount * 100);
+            var priceInKopecks = (int)(price * 100);
             
             // Create receipt item for fiscalization (54-ФЗ)
             var receiptItem = new ReceiptItem
             {
                 Name = description.Length > 64 ? description.Substring(0, 64) : description, // Max 64 chars per Tinkoff docs
-                Price = amountInKopecks,
+                Price = priceInKopecks,
                 Quantity = 1,
-                Amount = amountInKopecks,
+                Amount = priceInKopecks,
                 Tax = "none" // "none", "vat0", "vat10", "vat20" etc.
             };
 
@@ -49,7 +48,7 @@ namespace EasyLink.Services
             var requestData = new SortedDictionary<string, object>
             {
                 { "TerminalKey", _terminalKey },
-                { "Amount", amountInKopecks },
+                { "Amount", priceInKopecks },
                 { "OrderId", orderId },
                 { "Description", description },
                 { "Password", _password } // Password is required for token generation
@@ -100,7 +99,7 @@ namespace EasyLink.Services
                 { "Status", notification.Status },
                 { "PaymentId", notification.PaymentId },
                 { "ErrorCode", notification.ErrorCode },
-                { "Amount", notification.Amount },
+                { "Amount", notification.Price },
                 { "Password", _password } // Add password for check
             };
 
