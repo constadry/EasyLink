@@ -59,7 +59,7 @@ namespace EasyLink.Controllers
                 await _db.SaveChangesAsync();
 
                 var orderId = purchase.Id.ToString();
-                
+
                 var paymentUrl = await _tinkoffService.InitPaymentUrlAsync(orderId, shopItem.Price, purchase.Email, $"Order #{orderId}", request.Amount);
                 return Ok(new { url = paymentUrl });
             }
@@ -116,7 +116,7 @@ namespace EasyLink.Controllers
                     {
                         totalItemsAmount += item.Amount;
                     }
-                    
+
                     if (totalItemsAmount != (int)(request.Amount.Value * 100))
                     {
                         // This is a warning, depending on business logic you might want to fail
@@ -125,11 +125,11 @@ namespace EasyLink.Controllers
                 }
 
                 var result = await _tinkoffService.CancelPaymentAsync(request.PaymentId, request.Amount, request.Items, request.Email, request.Taxation);
-                
+
                 // You might want to update the database here as well if the cancellation is successful
                 // e.g., mark the purchase as Refunded. 
                 // However, doing it in the webhook is more robust.
-                
+
                 return Content(result, "application/json");
             }
             catch (Exception ex)
@@ -139,28 +139,91 @@ namespace EasyLink.Controllers
         }
 
         [HttpGet("purchases")]
-        public async Task<IActionResult> GetAllPurchases([FromQuery] PaginationRequest pagination)
+        public async Task<IActionResult> GetAllPurchases([FromQuery] PurchasesFilterRequest pagination)
         {
             try
             {
-                var purchases = await _db.Purchases
-                    .Include(p => p.ShopItem)
-                    .OrderByDescending(p => p.PurchaseDate)
+                var purchases = _db.Purchases.AsQueryable();
+
+                if (!string.IsNullOrEmpty(pagination.Email))
+                {
+                    purchases = purchases.Where(p => p.Email == pagination.Email);
+                }
+
+                if (!string.IsNullOrEmpty(pagination.Nickname))
+                {
+                    purchases = purchases.Where(p => p.Nickname == pagination.Nickname);
+                }
+
+                if (!string.IsNullOrEmpty(pagination.Status))
+                {
+                    purchases = purchases.Where(p => p.Status == pagination.Status);
+                }
+
+                if (!string.IsNullOrEmpty(pagination.PaymentId))
+                {
+                    purchases = purchases.Where(p => p.PaymentId == pagination.PaymentId);
+                }
+
+                if (pagination.ShopItemId.HasValue)
+                {
+                    purchases = purchases.Where(p => p.ShopItemId == pagination.ShopItemId);
+                }
+
+                if (pagination.PurchaseDate.HasValue)
+                {
+                    purchases = purchases.Where(p => p.PurchaseDate == pagination.PurchaseDate);
+                }
+
+                if (pagination.Amount.HasValue)
+                {
+                    purchases = purchases.Where(p => p.Amount == pagination.Amount);
+                }
+
+                if (pagination.Delivered.HasValue)
+                {
+                    purchases = purchases.Where(p => p.Delivered == pagination.Delivered);
+                }
+
+                var items = await purchases.OrderByDescending(p => p.PurchaseDate)
                     .Skip((pagination.Page - 1) * pagination.PageSize)
                     .Take(pagination.PageSize)
                     .ToListAsync();
 
                 var result = new PaginationResult<Purchase>
                 {
-                    Items = purchases,
+                    Items = items,
                     Pagination = new Pagination
                     {
+                        TotalCount = await purchases.CountAsync(),
                         Page = pagination.Page,
                         PageSize = pagination.PageSize,
                     }
                 };
 
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPatch("deliver/{id}&{status}")]
+        public async Task<IActionResult> MarkAsDelivered(int id, bool status)
+        {
+            try
+            {
+                var purchase = await _db.Purchases.FindAsync(id);
+                if (purchase == null)
+                {
+                    return NotFound(new { error = "Purchase not found" });
+                }
+
+                purchase.Delivered = status;
+                await _db.SaveChangesAsync();
+
+                return Ok(new { message = "Purchase marked as " + (status ? "delivered" : "not delivered") });
             }
             catch (Exception ex)
             {

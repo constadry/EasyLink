@@ -9,4 +9,5 @@ public class Purchase
     public decimal Amount { get; set; }
     public string? PaymentId { get; set; }
     public string Status { get; set; } = "NEW";
+    public bool? Delivered { get; set; }
 }

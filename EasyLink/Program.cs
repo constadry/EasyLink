@@ -1,8 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using EasyLink.Services;
 using EasyLink.Models;
@@ -76,12 +72,12 @@ else
 
 app.MapControllers();
 
-app.MapGet("/shopitems", async (PurchaseDb db) =>
+app.MapGet("api/shopitems", async (PurchaseDb db) =>
     await db.ShopItems.Where(s => s.IsActive).ToListAsync())
 .WithName("GetShopItems")
 .WithOpenApi();
 
-app.MapGet("/shopitems/{id}", async (int id, PurchaseDb db) =>
+app.MapGet("api/shopitems/{id}", async (int id, PurchaseDb db) =>
     await db.ShopItems.FindAsync(id)
         is ShopItem shopItem
         ? Results.Ok(shopItem)
