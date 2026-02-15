@@ -184,6 +184,10 @@ namespace EasyLink.Controllers
                 {
                     purchases = purchases.Where(p => p.Delivered == pagination.Delivered);
                 }
+                else
+                {
+                    purchases = purchases.Where(p => p.Delivered == null);
+                }
 
                 var items = await purchases.OrderByDescending(p => p.PurchaseDate)
                     .Skip((pagination.Page - 1) * pagination.PageSize)
@@ -209,8 +213,8 @@ namespace EasyLink.Controllers
             }
         }
 
-        [HttpPatch("deliver/{id}&{status}")]
-        public async Task<IActionResult> MarkAsDelivered(int id, bool status)
+        [HttpPatch("deliver/{id}")]
+        public async Task<IActionResult> MarkAsDelivered(int id, bool? status)
         {
             try
             {
@@ -223,7 +227,7 @@ namespace EasyLink.Controllers
                 purchase.Delivered = status;
                 await _db.SaveChangesAsync();
 
-                return Ok(new { message = "Purchase marked as " + (status ? "delivered" : "not delivered") });
+                return Ok(new { message = "Purchase marked as " + (status == true ? "delivered" : status == false ? "faulted" : "undelivered") });
             }
             catch (Exception ex)
             {
